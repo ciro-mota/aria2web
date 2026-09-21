@@ -2,7 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "automerge": false,
   "dependencyDashboard": true,
-  "schedule": ["0 3 * * 1"],
+  "schedule": ["* 3 * * 1"],
 
   "extends": [
     "config:recommended",
