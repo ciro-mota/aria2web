@@ -1,0 +1,12 @@
+services:
+  aria2web:
+    image: ghcr.io/ciro-mota/aria2web
+    container_name: aria2web
+    ports:
+       - 6800:6800
+       - 8080:8080
+    volumes:
+       - /change-for-your-path:/downloads
+    environment:
+       - RPC_SECRET=change-for-your-secret
+    restart: always

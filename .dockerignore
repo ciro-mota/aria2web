@@ -1,0 +1,6 @@
+.github/
+README.md
+LICENSE
+.hadolint.yaml
+renovate.json
+docker-compose.yml

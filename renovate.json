@@ -1,0 +1,50 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "renovateJsonSchema": true,
+
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigests"
+  ],
+
+  "timezone": "America/Bahia",
+
+  "docker-compose": {
+    "enabled": true
+  },
+
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Versao do Bulma carregada pelo CDN jsDelivr",
+      "managerFilePatterns": [
+        "/(^|/)index\\.html$/"
+      ],
+      "matchStrings": [
+        "cdn\\.jsdelivr\\.net/npm/(?<depName>[^@/\"']+)@(?<currentValue>[^/\"']+)/"
+      ],
+      "datasourceTemplate": "npm"
+    }
+  ],
+
+  "packageRules": [
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github actions"
+    },
+
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+
+      "labels": [
+        "major-update",
+        "manual-review"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+name: Aria2Web
+
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+  security-events: write
+
+run-name: ${{ github.event_name == 'schedule' && 'Scheduled Weekly Build' || github.event.inputs.manual_commit_message || github.event.head_commit.message }}
+
+concurrency:
+  group: aria2web-release
+  cancel-in-progress: false
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile'
+      - 'entrypoint.sh'
+      - 'www/**'
+  workflow_dispatch:
+    inputs:
+      manual_commit_message:
+        description: "Insert manual commit message"
+        type: string
+        required: true
+
+jobs:
+  Build:
+    runs-on: ubuntu-26.04
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+    
+    - name: Build Docker Image
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      env:
+        DOCKER_BUILD_SUMMARY: false
+      with:
+        context: .
+        push: false
+        load: true
+
+  Test:
+    runs-on: ubuntu-26.04
+    needs: Build
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Lint Dockerfile
+      uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+      with:
+        dockerfile: Dockerfile
+        config: .hadolint.yaml
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+    
+    - name: Build Docker Image
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      env:
+        DOCKER_BUILD_SUMMARY: false
+      with:
+        context: .
+        push: false
+        load: true
+        tags: ghcr.io/ciro-mota/aria2web
+
+    - name: Run Trivy vulnerability scanner
+      id: scan
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        image-ref: ghcr.io/ciro-mota/aria2web
+        format: sarif
+        output: trivy-results.sarif
+        severity: CRITICAL,HIGH,MEDIUM,LOW
+        exit-code: 0
+        version: latest
+    
+    - name: Install Trivy CLI to generate GITHUB_STEP_SUMMARY
+      run: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+    
+    - name: Publish Scan Summary into GITHUB_STEP_SUMMARY
+      run: |
+        echo "## Trivy Vulnerability Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        trivy image --format table ghcr.io/ciro-mota/aria2web >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload Trivy report to GitHub Security
+      uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+      with:
+        sarif_file: trivy-results.sarif
+        category: trivy-container-scan
+
+  Push:
+    needs: Test
+    runs-on: ubuntu-26.04
+
+    steps:
+    - name: Check out the repo
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Calculate next version
+      id: version
+      run: |
+        last=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+        if [ -z "$last" ]; then
+          next=v1.0.0
+        else
+          IFS=. read -r major minor patch <<< "${last#v}"
+          next="v${major}.${minor}.$((patch + 1))"
+        fi
+        {
+          echo "last=${last}"
+          echo "tag=${next}"
+          echo "number=${next#v}"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+    - name: GitHub Container Registry Login
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for Docker
+      id: docker_meta
+      uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+      with:
+          images: |
+            ghcr.io/ciro-mota/aria2web
+          tags: |
+            type=raw,value=${{ steps.version.outputs.number }}
+            type=sha,format=long
+          flavor: |
+            latest=true
+
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      env:
+        DOCKER_BUILD_SUMMARY: false
+      id: build-and-push
+      with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.docker_meta.outputs.tags }}
+
+    - name: Sign image with Cosign
+      env:
+        TAGS: ${{ steps.docker_meta.outputs.tags }}
+        COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        DIGEST: ${{ steps.build-and-push.outputs.digest }}
+      run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY ${images}
+
+    - name: Create GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ steps.version.outputs.tag }}
+        LAST: ${{ steps.version.outputs.last }}
+        MANUAL_MESSAGE: ${{ github.event.inputs.manual_commit_message }}
+      run: |
+        if [ -n "$LAST" ]; then
+          commits=$(git log --reverse --format='* %s (%h)' "${LAST}..${GITHUB_SHA}")
+          files=$(git diff --name-status "$LAST" "$GITHUB_SHA")
+        else
+          commits=$(git log -1 --format='* %s (%h)' "$GITHUB_SHA")
+          files=$(git show --name-status --format= "$GITHUB_SHA")
+        fi
+        {
+          echo "## Alterações"
+          echo
+          [ -n "$MANUAL_MESSAGE" ] && echo "* ${MANUAL_MESSAGE}"
+          [ -n "$commits" ] && echo "$commits"
+          if [ -n "$files" ]; then
+            echo
+            echo "## Arquivos alterados"
+            echo
+            echo '```'
+            echo "$files"
+            echo '```'
+          fi
+          echo
+          echo "## Imagem"
+          echo
+          echo '```'
+          echo "docker pull ghcr.io/ciro-mota/aria2web:${TAG#v}"
+          echo '```'
+        } > notes.md
+        gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md

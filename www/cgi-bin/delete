@@ -1,0 +1,51 @@
+#!/bin/sh
+printf "Content-Type: text/plain\r\n\r\n"
+read -r corpo
+gid=${corpo%%&*}; gid=${gid#gid=}
+token=${corpo#*&}; token=${token#token=}
+
+[ "${#gid}" -eq 16 ] || { echo "gid invalido"; exit 0; }
+case "$gid" in *[!0-9a-f]*) echo "gid invalido"; exit 0;; esac
+[ -n "$token" ] && [ "${#token}" -le 128 ] || { echo "token invalido"; exit 0; }
+case "$token" in *[!A-Za-z0-9._~-]*) echo "token com caracteres nao suportados"; exit 0;; esac
+
+rpc() { wget -qO- -T 5 --post-data "$1" http://127.0.0.1:6800/jsonrpc; }
+metodo() { rpc '{"jsonrpc":"2.0","id":"a","method":"aria2.'"$1"'","params":["token:'"$token"'","'"$gid"'"]}'; }
+
+consulta() { rpc '{"jsonrpc":"2.0","id":"a","method":"aria2.tellStatus","params":["token:'"$token"'","'"$gid"'",["'"$1"'"]]}'; }
+
+resp=$(consulta status)
+case "$resp" in ""|*'"error"'*) echo "aria2 recusou a consulta (token ou gid)"; exit 0;; esac
+status=$(printf '%s' "$resp" | sed -n 's/.*"status":"\([a-z]*\)".*/\1/p')
+paths=$(consulta files | grep -o '"path":"[^"]*"' | sed 's/^"path":"//; s/"$//; s#\\/#/#g')
+
+valido() {
+  case "$1" in /downloads/*) ;; *) return 1;; esac
+  case "$1" in */../*|*/..|*\\*) return 1;; esac
+  if [ -e "$1" ]; then
+    real=$(readlink -f -- "$1")
+    case "$real" in /downloads/*) ;; *) return 1;; esac
+  fi
+  return 0
+}
+
+while IFS= read -r p; do
+  [ -n "$p" ] || continue
+  valido "$p" || { echo "caminho recusado: $p"; exit 0; }
+done <<EOL
+$paths
+EOL
+
+case "$status" in
+  active|waiting|paused) metodo forceRemove >/dev/null; sleep 1;;
+esac
+
+while IFS= read -r p; do
+  [ -n "$p" ] || continue
+  rm -f -- "$p" "$p.aria2"
+done <<EOL
+$paths
+EOL
+
+metodo removeDownloadResult >/dev/null
+echo ok

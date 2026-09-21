@@ -1,0 +1,69 @@
+html,body {
+    background:#2E2E33;
+    color:#e6e6e6
+}
+
+body {
+    max-width:720px;
+    margin:1rem auto;
+    padding:0 1rem;
+    text-align:center
+}
+
+[hidden] {
+    display:none!important
+}
+
+.input {
+    background:#2E2E33;
+    color:#e6e6e6;
+    border-color:#55555c
+}
+
+.input::placeholder {
+    color:#9a9aa0
+}
+
+ul {
+    padding:0
+}
+
+li {
+    margin:.8rem 0;
+    list-style:none
+}
+
+.inf {
+    gap:1.2rem;
+    margin-top:.4rem
+}
+
+.icon svg {
+    width:1.3rem;
+    height:1.3rem
+}
+
+.ativo {
+    color:#2b7be4
+}
+
+.completo {
+    color:#2e9e5b
+}
+
+.parado {
+    color:#d64545
+}
+
+.pausado {
+    color:#e0a800
+}
+
+.select select {background:#2E2E33;
+    color:#e6e6e6;
+    border-color:#55555c
+}
+
+.modal-card-foot {
+    gap:1.80rem
+}
