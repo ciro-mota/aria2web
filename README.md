@@ -20,7 +20,7 @@ docker container run -d --name aria2web \
   aria2web
 ```
 
-Or download the [docker-compose](https://raw.githubusercontent.com/ciro-mota/aria2web/refs/heads/main/docker-compose.yml) file and run `docker compose up -d`.
+Or download the [docker-compose](https://raw.githubusercontent.com/ciro-mota/aria2web/refs/heads/main/docker-compose.yml) file, change the downloads directory in `volumes` and your secret in `environment`, finally run `docker compose up -d`.
 
 Open `http://localhost:8080` and enter the `RPC_SECRET` value as the token.
 
@@ -28,6 +28,12 @@ To provide other destination folders, mount each one inside `/downloads`. Exampl
 
 ```
 -v /mnt/hd2/isos:/downloads/isos
+```
+
+```
+ volumes:
+   - /change-for-your-path:/downloads
+   - /mnt/hd2/isos:/downloads/isos
 ```
 
 ## 🔧 Configuration
