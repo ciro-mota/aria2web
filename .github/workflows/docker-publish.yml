@@ -193,23 +193,9 @@ jobs:
           files=$(git show --name-status --format= "$GITHUB_SHA")
         fi
         {
-          echo "## Alterações"
+          echo "## Changelog"
           echo
           [ -n "$MANUAL_MESSAGE" ] && echo "* ${MANUAL_MESSAGE}"
           [ -n "$commits" ] && echo "$commits"
-          if [ -n "$files" ]; then
-            echo
-            echo "## Arquivos alterados"
-            echo
-            echo '```'
-            echo "$files"
-            echo '```'
-          fi
-          echo
-          echo "## Imagem"
-          echo
-          echo '```'
-          echo "docker pull ghcr.io/ciro-mota/aria2web:${TAG#v}"
-          echo '```'
         } > notes.md
         gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md
