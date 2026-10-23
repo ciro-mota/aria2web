@@ -4,9 +4,7 @@
   "extends": [
     "config:recommended"
   ],
-  
-  "automerge": false,
-  
+
   "dependencyDashboard": true,
 
   "timezone": "America/Bahia",
@@ -33,17 +31,19 @@
     }
   ],
 
-  "labels": [
-    "docker",
-    "automerge"
-  ],
-
   "packageRules": [
+    {
+      "matchDatasources": ["docker"],
+      "addLabels": ["docker", "automerge"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["automerge"]
+    },
     {
       "matchUpdateTypes": ["pin", "digest", "patch", "minor"],
       "addLabels": ["automerge"]
     },
-
     {
       "matchUpdateTypes": ["major"],
       "addLabels": ["major-update", "manual-review"]
