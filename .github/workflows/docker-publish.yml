@@ -150,7 +150,6 @@ jobs:
             ghcr.io/ciro-mota/aria2web
           tags: |
             type=raw,value=${{ steps.version.outputs.number }}
-            type=sha,format=long
           flavor: |
             latest=true
 
