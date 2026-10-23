@@ -32,12 +32,25 @@
 
   "packageRules": [
     {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["dhi.io/alpine-base"]
+    },
+
+    {
+      "matchUpdateTypes": ["pin", "digest", "patch", "minor"],
+      "addLabels": ["automerge"]
+    },
+
+    {
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["major-update", "manual-review"]
+    },
+    {
       "matchManagers": [
         "github-actions"
       ],
       "groupName": "github actions"
     },
-
     {
       "matchUpdateTypes": [
         "major"
