@@ -33,6 +33,11 @@
     }
   ],
 
+  "labels": [
+    "docker",
+    "automerge"
+  ],
+
   "packageRules": [
     {
       "matchUpdateTypes": ["pin", "digest", "patch", "minor"],
