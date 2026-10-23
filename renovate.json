@@ -34,31 +34,14 @@
   ],
 
   "packageRules": [
-    
     {
-      "matchDatasources": ["docker"],
       "matchUpdateTypes": ["pin", "digest", "patch", "minor"],
       "addLabels": ["automerge"]
     },
+
     {
       "matchUpdateTypes": ["major"],
       "addLabels": ["major-update", "manual-review"]
-    },
-    {
-      "matchManagers": [
-        "github-actions"
-      ],
-      "groupName": "github actions"
-    },
-    {
-      "matchUpdateTypes": [
-        "major"
-      ],
-
-      "labels": [
-        "major-update",
-        "manual-review"
-      ]
     }
   ]
 }
