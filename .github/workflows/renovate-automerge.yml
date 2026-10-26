@@ -50,7 +50,9 @@ jobs:
                 );
 
                 const affectsImage = files.some(f =>
-                  f.filename === "Dockerfile" || f.filename.startsWith("app/")
+                  f.filename === "Dockerfile" ||
+                  f.filename === "entrypoint.sh" ||
+                  f.filename.startsWith("www/")
                 );
 
                 console.log(`Trying merge for #${pr.number}`);
