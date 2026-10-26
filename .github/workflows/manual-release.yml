@@ -1,0 +1,50 @@
+name: Manual Release
+
+permissions:
+  contents: read
+  actions: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      manual_commit_message:
+        description: "Insert manual commit message"
+        type: string
+        required: true
+
+jobs:
+  Check:
+    runs-on: ubuntu-26.04
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: main
+        fetch-depth: 0
+
+    - name: Check for changes since last release
+      id: changes
+      run: |
+        last=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+        if [ -z "$last" ]; then
+          echo "No previous release found; release allowed."
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        changed=$(git diff --name-only "$last" HEAD -- Dockerfile entrypoint.sh www/)
+        if [ -z "$changed" ]; then
+          echo "No changes in Dockerfile, entrypoint.sh or www/ since ${last}; release skipped."
+          echo "release=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "Changes since ${last}:"
+          echo "$changed"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Trigger release
+      if: steps.changes.outputs.release == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        MESSAGE: ${{ github.event.inputs.manual_commit_message }}
+      run: |
+        gh workflow run docker-publish.yml --ref main -f manual_commit_message="$MESSAGE"
