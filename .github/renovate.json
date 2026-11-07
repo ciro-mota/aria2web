@@ -1,17 +1,15 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-
   "extends": [
     "config:recommended"
   ],
-
-  "dependencyDashboard": true,
 
   "timezone": "America/Bahia",
 
   "ignoreTests": true,
 
   "pinDigests": true,
+
+  "automerge": false,
 
   "docker-compose": {
     "enabled": true
