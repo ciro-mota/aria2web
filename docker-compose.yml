@@ -1,6 +1,6 @@
 services:
   aria2web:
-    image: ghcr.io/ciro-mota/aria2web:1.0.1@sha256:bbb099bf1f5aafe7bf73f194fc7be795eb27db6d5b6bfb0f554509a3d72126d9
+    image: ghcr.io/ciro-mota/aria2web:latest
     container_name: aria2web
     ports:
       - 6800:6800
