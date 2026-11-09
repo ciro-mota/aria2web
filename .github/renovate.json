@@ -15,6 +15,10 @@
     "enabled": true
   },
 
+  "ignorePaths": [
+    "docker-compose.yml"
+  ],
+
   "customManagers": [
     {
       "customType": "regex",
